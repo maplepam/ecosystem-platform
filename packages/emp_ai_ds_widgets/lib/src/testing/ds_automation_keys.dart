@@ -10,7 +10,9 @@ import 'package:flutter/foundation.dart';
 /// [NorthstarTextArea], [NorthstarTextAreaRichToolbar], [NorthstarFilterDropdown], [NorthstarMenuField], [NorthstarAllFiltersButton],
 /// [DashboardLayoutBuilder],
 /// [NorthstarNavigationDrawer], [NorthstarPaginationBar], [NorthstarDataTable],
-/// [NorthstarSnackbar], [NorthstarSelectionRow], [NorthstarCheckboxRow],
+/// [NorthstarSnackbar], [NorthstarSlider], [NorthstarTabBar],
+/// [NorthstarSegmentedControl], [NorthstarPlainTooltip], [NorthstarRichTooltip],
+/// [NorthstarSelectionRow], [NorthstarCheckboxRow],
 /// [NorthstarSelectionGroup], [NorthstarBatchActionBar], …)
 /// and a unique
 /// [elementId] per sub-control. Format: `ds:<automationId>:<elementId>`.
@@ -209,6 +211,18 @@ abstract final class DsAutomationKeys {
   /// Select-all checkbox in header when row selection is enabled.
   static const String elementDataTableHeaderSelectAll =
       'data_table_header_select_all';
+
+  /// [NorthstarSlider] track + thumb.
+  static const String elementSlider = 'slider';
+
+  /// [NorthstarTabBar] root.
+  static const String elementTabBar = 'tab_bar';
+
+  /// [NorthstarSegmentedControl] / [SegmentedButton] root.
+  static const String elementSegmentedControl = 'segmented_control';
+
+  /// [NorthstarPlainTooltip] / [NorthstarRichTooltip] anchor child wrapper.
+  static const String elementTooltip = 'tooltip';
 
   /// [NorthstarSnackbar] outer surface (inside [SnackBar] content).
   static const String elementSnackbar = 'snackbar';

@@ -1,6 +1,7 @@
 import 'package:emp_ai_ds_northstar/emp_ai_ds_northstar.dart';
 import 'package:emp_ai_ds_widgets/src/catalog/widget_catalog_entry.dart';
 import 'package:emp_ai_ds_widgets/src/display/northstar_linear_progress.dart';
+import 'package:emp_ai_ds_widgets/src/display/northstar_slider.dart';
 import 'package:flutter/material.dart';
 
 WidgetCatalogEntry northstarLinearProgressCatalogEntry() {
@@ -22,6 +23,14 @@ WidgetCatalogEntry northstarLinearProgressCatalogEntry() {
     trackColor: NorthstarColorTokens.of(context).surfaceContainerHigh,
     color: NorthstarColorTokens.of(context).primary,
   )
+
+  // Drive determinate value with NorthstarSlider (0–100)
+  NorthstarSlider(
+    value: pct,
+    onChanged: (v) => setState(() => pct = v),
+    showValueIndicator: true,
+  )
+  // NorthstarLinearProgress(value: pct / 100)
   ''',
     preview: (BuildContext context) =>
         const _NorthstarLinearProgressCatalogDemo(),
@@ -70,9 +79,11 @@ class _NorthstarLinearProgressCatalogDemoState
             ),
             if (!_indeterminate) ...<Widget>[
               const SizedBox(height: 12),
-              Slider(
-                value: _value,
-                onChanged: (double v) => setState(() => _value = v),
+              NorthstarSlider(
+                value: _value * 100,
+                onChanged: (double v) => setState(() => _value = v / 100),
+                showValueIndicator: true,
+                automationId: 'cat_prog_slider',
               ),
             ],
             const SizedBox(height: 20),

@@ -23,12 +23,16 @@ import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_p
 import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_navigation_drawer_catalog_entry.dart';
 import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_scaffold_with_drawer_catalog_entry.dart';
 import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_search_field_catalog_entry.dart';
+import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_segmented_control_catalog_entry.dart';
+import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_slider_catalog_entry.dart';
 import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_selection_catalog_entry.dart';
 import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_snackbar_catalog_entry.dart';
+import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_tab_bar_catalog_entry.dart';
 import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_spacing_scale_table_catalog_entry.dart';
 import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_stacked_avatars_catalog_entry.dart';
 import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_text_area_catalog_entry.dart';
 import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_text_link_catalog_entry.dart';
+import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_tooltip_catalog_entry.dart';
 import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_tri_state_body_catalog_entry.dart';
 import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/northstar_typography_roles_catalog_entry.dart';
 import 'package:emp_ai_ds_widgets/src/catalog/widget_library_entries/reorderable_dashboard_slot_list_catalog_entry.dart';
@@ -48,6 +52,7 @@ List<WidgetCatalogEntry> builtInWidgetLibraryEntries() {
       northstarPaginationCatalogEntry(),
       northstarSelectionCatalogEntry(),
       northstarSnackbarCatalogEntry(),
+      northstarSliderCatalogEntry(),
       northstarDataTableCatalogEntry(),
       northstarMenuCatalogEntry(),
       northstarIconLibraryCatalogEntry(),
@@ -65,8 +70,11 @@ List<WidgetCatalogEntry> builtInWidgetLibraryEntries() {
       northstarAccordionCatalogEntry(),
       northstarBannerCatalogEntry(),
       northstarFilterChipStripCatalogEntry(),
+      northstarSegmentedControlCatalogEntry(),
       northstarFilterDropdownCatalogEntry(),
       northstarFileUploaderCatalogEntry(),
       northstarTriStateBodyCatalogEntry(),
+      northstarTabBarCatalogEntry(),
+      northstarTooltipCatalogEntry(),
   ];
 }

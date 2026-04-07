@@ -1,6 +1,7 @@
 import 'package:flex_seed_scheme/flex_seed_scheme.dart';
 import 'package:flutter/material.dart';
 
+import 'northstar_base_tokens.dart';
 import 'northstar_color_tokens.dart';
 import 'northstar_figma_typography.dart';
 import 'northstar_typography.dart';
@@ -16,7 +17,9 @@ abstract final class NorthstarTheme {
   /// [NorthstarColorTokens] so [NorthstarColorTokens.of] stays aligned with
   /// [Theme.of] / [ColorScheme] (shell rail, overview cards, buttons, etc.).
   ///
-  /// Semantic-only roles (**success**, **warning**, …) stay on [base].
+  /// Figma-only roles (**primaryHover**, **miscellaneous***, card tiers, …)
+  /// stay on [base] unchanged. Semantic-only Material slots (**success**,
+  /// **warning**, …) also stay on [base] (not overridden by [ColorScheme]).
   static NorthstarColorTokens _tokensAlignedWithScheme(
     NorthstarColorTokens base,
     ColorScheme scheme,
@@ -44,7 +47,7 @@ abstract final class NorthstarTheme {
 
   static ThemeData buildThemeData({
     required Brightness brightness,
-    NorthstarColorTokens tokens = NorthstarColorTokens.v3,
+    NorthstarColorTokens tokens = NorthstarBaseTokens.light,
     Color? seedColor,
     String? fontFamily,
     ThemeData? base,
@@ -82,9 +85,8 @@ abstract final class NorthstarTheme {
               ),
           };
 
-    final NorthstarColorTokens extensionTokens = seedColor != null
-        ? _tokensAlignedWithScheme(tokens, scheme)
-        : tokens;
+    final NorthstarColorTokens extensionTokens =
+        seedColor != null ? _tokensAlignedWithScheme(tokens, scheme) : tokens;
 
     return seed.copyWith(
       brightness: brightness,

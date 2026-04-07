@@ -1,0 +1,15 @@
+name: ecosystem_platform
+repository: null
+
+packages:
+  - packages/**
+
+scripts:
+  analyze:all:
+    description: Run flutter analyze on every package that has lib/
+    run: dart run melos exec --concurrency 1 --fail-fast -- "flutter analyze ."
+    packageFilters:
+      dirExists: lib
+
+ide:
+  intellij: false

@@ -8,39 +8,38 @@ WidgetCatalogEntry northstarTooltipCatalogEntry() {
     id: 'northstar_tooltip',
     title: 'NorthstarTooltip',
     description:
-        '**Plain** ([NorthstarPlainTooltip]): [NorthstarTooltipSpecs.plainMaxWidth] max width, '
-        'no min width; ≤${NorthstarTooltipSpecs.plainMaxCharacters} characters; optional '
-        '[NorthstarTooltipTailPosition] tail. **Rich** ([NorthstarRichTooltip]): '
-        '${NorthstarTooltipSpecs.richMinWidth}–${NorthstarTooltipSpecs.richMaxWidth} width, '
-        '≤${NorthstarTooltipSpecs.richMaxCharacters} chars for title+body text; optional '
-        'title, [leading] icon, or [content] widget. Gap **4** / **8** from [hasVisualBoundary].',
+        '**Plain**: max ${NorthstarTooltipSpecs.plainMaxWidth}px wide, no min; '
+        '≤${NorthstarTooltipSpecs.plainMaxCharacters} chars recommended; '
+        '[NorthstarTooltipTailPosition]. **Rich**: '
+        '${NorthstarTooltipSpecs.richMinWidth}–${NorthstarTooltipSpecs.richMaxWidth}px; '
+        '≤${NorthstarTooltipSpecs.richMaxCharacters} chars (title+body). '
+        '**Gap**: [hasVisualBoundary] true → ${NorthstarTooltipSpecs.gapWithBoundary}px '
+        '(button-like); false → ${NorthstarTooltipSpecs.gapWithoutBoundary}px (text). '
+        'Use [verticalOffset] only to override that default.',
     code: '''
-  // Plain — default: no tail (Material), 4px gap with boundary
+  // 4 px gap — icon button has a visible boundary (default hasVisualBoundary: true)
   NorthstarPlainTooltip(
-    message: 'Sorts by last updated.',
+    message: 'Sorts by date.',
     child: IconButton(icon: Icon(Icons.info_outline), onPressed: () {}),
   )
 
-  // Plain — Figma tail under bubble (custom overlay)
+  // 8 px gap — underline text, no box (set hasVisualBoundary: false)
+  NorthstarPlainTooltip(
+    message: 'Helper text',
+    hasVisualBoundary: false,
+    child: Text('Hover', style: TextStyle(decoration: TextDecoration.underline)),
+  )
+
   NorthstarPlainTooltip(
     message: 'With tail',
     tailPosition: NorthstarTooltipTailPosition.bottom,
     child: IconButton(icon: Icon(Icons.label), onPressed: () {}),
   )
 
-  // Rich — title + body (Material when tail is none)
   NorthstarRichTooltip(
     title: 'Talent score',
-    description: 'Composite from reviews and delivery outcomes.',
+    description: 'Composite from reviews and outcomes.',
     child: Text('Score', style: TextStyle(decoration: TextDecoration.underline)),
-  )
-
-  // Rich — custom body + icon (custom overlay)
-  NorthstarRichTooltip(
-    title: 'Details',
-    content: Row(children: [Icon(Icons.star), Text('4.0')]),
-    leading: Icon(Icons.person_outline),
-    child: Chip(label: Text('Rated')),
   )
   ''',
     preview: (BuildContext context) => const _NorthstarTooltipCatalogDemo(),
@@ -56,114 +55,203 @@ class _NorthstarTooltipCatalogDemo extends StatefulWidget {
 }
 
 class _NorthstarTooltipCatalogDemoState extends State<_NorthstarTooltipCatalogDemo> {
-  bool _plainTightOffset = false;
+  NorthstarTooltipTailPosition _plainTail = NorthstarTooltipTailPosition.none;
+
+  /// Stays within [NorthstarTooltipSpecs.plainMaxCharacters]; still wraps near 200px width.
+  static const String _plainNearMaxWidthThreeLines =
+      'Max 200px width; extra words wrap onto more lines here.';
+
+  /// Three lines (newlines); with title stays within the 150-char guideline.
+  static const String _richNearMaxWidthThreeLines =
+      'Near 350 px max, first line of rich body.\n'
+      'Second line continues the catalog sample.\n'
+      'Third line; keeps char limit with title.';
 
   @override
   Widget build(BuildContext context) {
     final TextTheme tt = Theme.of(context).textTheme;
+    final ColorScheme cs = Theme.of(context).colorScheme;
 
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(NorthstarSpacing.space16),
         child: SizedBox(
-          width: 400,
+          width: 440,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text('Plain tooltip', style: tt.labelSmall),
-              const SizedBox(height: NorthstarSpacing.space8),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: Text(
-                  'verticalOffset 0 (override 4/8 gap)',
-                  style: tt.labelLarge,
-                ),
-                value: _plainTightOffset,
-                onChanged: (bool v) => setState(() => _plainTightOffset = v),
+              Text('Spacing (Figma)', style: tt.titleSmall),
+              const SizedBox(height: NorthstarSpacing.space4),
+              Text(
+                'Use hasVisualBoundary: true (default) for controls with a visible '
+                'box — gap is ${NorthstarTooltipSpecs.gapWithBoundary}px above the '
+                'anchor. Use false for plain text or baseline anchors — gap is '
+                '${NorthstarTooltipSpecs.gapWithoutBoundary}px. '
+                'verticalOffset only overrides those defaults if you need a custom gap.',
+                style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
-              const SizedBox(height: NorthstarSpacing.space8),
+              const SizedBox(height: NorthstarSpacing.space12),
               Wrap(
-                spacing: NorthstarSpacing.space12,
+                spacing: NorthstarSpacing.space24,
                 runSpacing: NorthstarSpacing.space12,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: <Widget>[
-                  NorthstarPlainTooltip(
-                    message: 'No tail (Material). Max 200px wide.',
-                    verticalOffset:
-                        _plainTightOffset ? 0 : null,
-                    hasVisualBoundary: !_plainTightOffset,
-                    automationId: 'cat_tip_plain_none',
-                    child: IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.view_compact_outlined),
-                    ),
-                  ),
-                  NorthstarPlainTooltip(
-                    message: 'Tail bottom',
-                    tailPosition: NorthstarTooltipTailPosition.bottom,
-                    verticalOffset:
-                        _plainTightOffset ? 0 : null,
-                    hasVisualBoundary: !_plainTightOffset,
-                    automationId: 'cat_tip_plain_tail_b',
-                    child: IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.arrow_downward),
-                    ),
-                  ),
-                  NorthstarPlainTooltip(
-                    message: 'Tail top',
-                    tailPosition: NorthstarTooltipTailPosition.top,
-                    verticalOffset:
-                        _plainTightOffset ? 0 : null,
-                    hasVisualBoundary: !_plainTightOffset,
-                    automationId: 'cat_tip_plain_tail_t',
-                    child: IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.arrow_upward),
-                    ),
-                  ),
-                  NorthstarPlainTooltip(
-                    message: 'Text anchor',
-                    verticalOffset:
-                        _plainTightOffset ? 0 : null,
-                    hasVisualBoundary: !_plainTightOffset,
-                    automationId: 'cat_tip_plain_text',
-                    child: Text(
-                      'Hover label',
-                      style: tt.titleSmall?.copyWith(
-                        decoration: TextDecoration.underline,
-                        decorationColor:
-                            NorthstarColorTokens.of(context).primary,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        '${NorthstarTooltipSpecs.gapWithBoundary}px — button',
+                        style: tt.labelMedium,
                       ),
-                    ),
+                      Text(
+                        'hasVisualBoundary: true (default)',
+                        style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: NorthstarSpacing.space8),
+                      NorthstarPlainTooltip(
+                        message: 'Four pixel gap above this icon button.',
+                        hasVisualBoundary: true,
+                        automationId: 'cat_tip_gap_4',
+                        child: IconButton(
+                          onPressed: () {},
+                          icon: const Icon(Icons.touch_app_outlined),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        '${NorthstarTooltipSpecs.gapWithoutBoundary}px — text',
+                        style: tt.labelMedium,
+                      ),
+                      Text(
+                        'hasVisualBoundary: false',
+                        style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: NorthstarSpacing.space8),
+                      NorthstarPlainTooltip(
+                        message: 'Eight pixel gap above this text anchor.',
+                        hasVisualBoundary: false,
+                        automationId: 'cat_tip_gap_8',
+                        child: Text(
+                          'Hover this label',
+                          style: tt.titleSmall?.copyWith(
+                            decoration: TextDecoration.underline,
+                            decorationColor:
+                                NorthstarColorTokens.of(context).primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
               const SizedBox(height: NorthstarSpacing.space24),
-              Text('Rich tooltip', style: tt.labelSmall),
+              Text('Plain — tail position', style: tt.titleSmall),
+              const SizedBox(height: NorthstarSpacing.space4),
+              Text(
+                'Choose a tail; the icon button below updates. none uses Material '
+                'Tooltip; other values use the custom bubble.',
+                style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(height: NorthstarSpacing.space8),
+              Wrap(
+                spacing: NorthstarSpacing.space8,
+                runSpacing: NorthstarSpacing.space8,
+                children: <Widget>[
+                  for (final NorthstarTooltipTailPosition p
+                      in NorthstarTooltipTailPosition.values)
+                    ChoiceChip(
+                      label: Text(_tailLabel(p)),
+                      selected: _plainTail == p,
+                      onSelected: (_) => setState(() => _plainTail = p),
+                    ),
+                ],
+              ),
+              const SizedBox(height: NorthstarSpacing.space12),
+              NorthstarPlainTooltip(
+                key: ValueKey<NorthstarTooltipTailPosition>(_plainTail),
+                tailPosition: _plainTail,
+                message: 'Tail: ${_tailLabel(_plainTail)}',
+                automationId: 'cat_tip_tail_demo',
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    onTap: () {},
+                    borderRadius: BorderRadius.circular(20),
+                    child: const Padding(
+                      padding: EdgeInsets.all(NorthstarSpacing.space8),
+                      child: Icon(Icons.arrow_drop_up),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: NorthstarSpacing.space24),
+              Text('Plain — hug small content', style: tt.titleSmall),
+              const SizedBox(height: NorthstarSpacing.space8),
+              NorthstarPlainTooltip(
+                message: 'OK',
+                automationId: 'cat_tip_plain_hug',
+                child: IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.check_circle_outline),
+                ),
+              ),
+              const SizedBox(height: NorthstarSpacing.space24),
+              Text(
+                'Plain — near max ${NorthstarTooltipSpecs.plainMaxWidth}px, ~3 lines',
+                style: tt.titleSmall,
+              ),
+              const SizedBox(height: NorthstarSpacing.space4),
+              Text(
+                'Stays within ${NorthstarTooltipSpecs.plainMaxCharacters} chars; width still drives wrap.',
+                style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(height: NorthstarSpacing.space8),
+              NorthstarPlainTooltip(
+                message: _plainNearMaxWidthThreeLines,
+                automationId: 'cat_tip_plain_max',
+                child: IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.format_align_left),
+                ),
+              ),
+              const SizedBox(height: NorthstarSpacing.space24),
+              Text('Rich — short copy (min ${NorthstarTooltipSpecs.richMinWidth}px width)',
+                  style: tt.titleSmall),
+              const SizedBox(height: NorthstarSpacing.space4),
+              Text(
+                'Width never goes below ${NorthstarTooltipSpecs.richMinWidth}px even when '
+                'title and body are very short (“hug” above that floor).',
+                style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
               const SizedBox(height: NorthstarSpacing.space8),
               NorthstarRichTooltip(
-                title: 'Talent score',
-                description:
-                    'Composite from peer reviews, tenure, and delivery outcomes. '
-                    'Updated weekly; not a promotion guarantee.',
-                automationId: 'cat_tip_rich',
+                title: 'Note',
+                description: 'Short.',
+                automationId: 'cat_tip_rich_hug',
                 child: ActionChip(
-                  label: const Text('Talent score'),
-                  avatar: const Icon(Icons.insights_outlined, size: 18),
+                  label: const Text('Tiny chip'),
                   onPressed: () {},
                 ),
               ),
-              const SizedBox(height: NorthstarSpacing.space12),
+              const SizedBox(height: NorthstarSpacing.space24),
+              Text(
+                'Rich — near max ${NorthstarTooltipSpecs.richMaxWidth}px, ~3 lines',
+                style: tt.titleSmall,
+              ),
+              const SizedBox(height: NorthstarSpacing.space8),
               NorthstarRichTooltip(
-                title: 'With leading icon',
-                description: 'Short body under the title.',
-                leading: const Icon(Icons.info_outline),
-                automationId: 'cat_tip_rich_lead',
+                title: 'Talent score : 90%',
+                description: _richNearMaxWidthThreeLines,
+                automationId: 'cat_tip_rich_max',
                 child: OutlinedButton(
                   onPressed: () {},
-                  child: const Text('Hover'),
+                  child: const Text('Wide rich tooltip'),
                 ),
               ),
             ],
@@ -171,5 +259,15 @@ class _NorthstarTooltipCatalogDemoState extends State<_NorthstarTooltipCatalogDe
         ),
       ),
     );
+  }
+
+  static String _tailLabel(NorthstarTooltipTailPosition p) {
+    return switch (p) {
+      NorthstarTooltipTailPosition.none => 'none',
+      NorthstarTooltipTailPosition.top => 'top',
+      NorthstarTooltipTailPosition.right => 'right',
+      NorthstarTooltipTailPosition.bottom => 'bottom',
+      NorthstarTooltipTailPosition.left => 'left',
+    };
   }
 }

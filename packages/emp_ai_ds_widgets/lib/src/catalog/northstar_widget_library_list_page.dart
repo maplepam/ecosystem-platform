@@ -37,9 +37,7 @@ class _NorthstarWidgetLibraryListPageState
         : widget.entries
             .where(
               (WidgetCatalogEntry e) =>
-                  e.id.toLowerCase().contains(q) ||
-                  e.title.toLowerCase().contains(q) ||
-                  e.description.toLowerCase().contains(q),
+                  e.title.toLowerCase().contains(q),
             )
             .toList(growable: false);
     final List<WidgetCatalogEntry> sorted = List<WidgetCatalogEntry>.of(list)

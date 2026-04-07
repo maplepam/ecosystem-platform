@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:emp_ai_ds_northstar/emp_ai_ds_northstar.dart';
 import 'package:emp_ai_ds_widgets/src/testing/ds_automation_keys.dart';
@@ -7,7 +8,7 @@ import 'package:flutter/material.dart';
 /// Which edge of the tooltip bubble shows the pointer triangle (Figma *Tabs* /
 /// tooltip spec). [none] is a rounded rectangle only.
 enum NorthstarTooltipTailPosition {
-  /// Triangle centered on the top edge, pointing upward.
+  /// Triangle centered on the top edge, pointing upward (bubble sits below the anchor).
   top,
 
   /// Triangle centered on the right edge, pointing right.
@@ -53,6 +54,14 @@ abstract final class NorthstarTooltipSpecs {
 
   /// Gap when the anchor has no clear box (e.g. text baseline), per Figma.
   static const double gapWithoutBoundary = 8;
+
+  /// [Tooltip] positions from the anchor widget **center**, not its edge.
+  /// Add this to the Figma edge gap ([gapWithBoundary]) when passing
+  /// [Tooltip.verticalOffset] for controls with a visible boundary (~48dp).
+  static const double materialAnchorHalfExtentWithBoundary = 24;
+
+  /// Same as [materialAnchorHalfExtentWithBoundary] for text / baseline anchors.
+  static const double materialAnchorHalfExtentWithoutBoundary = 10;
 }
 
 class _TailPainter extends CustomPainter {
@@ -203,9 +212,125 @@ class _NorthstarTooltipBubble extends StatelessWidget {
   }
 }
 
+/// Horizontal / vertical placement for the tailed overlay (not [none]).
+enum _TailedTooltipAxis {
+  /// [NorthstarTooltipTailPosition.top] / [bottom] / [none] on custom path.
+  vertical,
+
+  /// Tail on the left of the bubble; bubble sits to the right of the anchor.
+  bubbleRightOfAnchor,
+
+  /// Tail on the right of the bubble; bubble sits to the left of the anchor.
+  bubbleLeftOfAnchor,
+}
+
+_TailedTooltipAxis _tailedAxisFor(NorthstarTooltipTailPosition tail) {
+  return switch (tail) {
+    NorthstarTooltipTailPosition.left => _TailedTooltipAxis.bubbleRightOfAnchor,
+    NorthstarTooltipTailPosition.right => _TailedTooltipAxis.bubbleLeftOfAnchor,
+    NorthstarTooltipTailPosition.top => _TailedTooltipAxis.vertical,
+    NorthstarTooltipTailPosition.bottom => _TailedTooltipAxis.vertical,
+    NorthstarTooltipTailPosition.none => _TailedTooltipAxis.vertical,
+  };
+}
+
+/// [NorthstarTooltipTailPosition.top] draws the triangle on the top of the
+/// bubble pointing up, so the bubble sits **below** the anchor. [bottom] is
+/// the inverse. Other tails / [none] on the custom path use [preferBelow].
+bool _tailedVerticalPreferBelow(
+  NorthstarTooltipTailPosition tail,
+  bool preferBelow,
+) {
+  return switch (tail) {
+    NorthstarTooltipTailPosition.top => true,
+    NorthstarTooltipTailPosition.bottom => false,
+    _ => preferBelow,
+  };
+}
+
+/// Positions the tailed bubble in overlay coordinates (same idea as Material
+/// [Tooltip], avoids [CompositedTransformFollower] + [LayerLink] with
+/// [OverlayPortal], which can fail to link or composite for some placements).
+class _TailedTooltipLayoutDelegate extends SingleChildLayoutDelegate {
+  const _TailedTooltipLayoutDelegate({
+    required this.anchorInOverlay,
+    required this.overlaySize,
+    required this.gap,
+    required this.preferBelow,
+    required this.axis,
+  });
+
+  final Rect anchorInOverlay;
+  final Size overlaySize;
+  final double gap;
+  final bool preferBelow;
+  final _TailedTooltipAxis axis;
+
+  static const double _margin = 8;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      constraints.loosen();
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    switch (axis) {
+      case _TailedTooltipAxis.bubbleRightOfAnchor:
+        return Offset(
+          _clampHorizontal(anchorInOverlay.right + gap, childSize.width),
+          _clampVertical(
+            anchorInOverlay.center.dy - childSize.height / 2,
+            childSize.height,
+          ),
+        );
+      case _TailedTooltipAxis.bubbleLeftOfAnchor:
+        return Offset(
+          _clampHorizontal(
+            anchorInOverlay.left - gap - childSize.width,
+            childSize.width,
+          ),
+          _clampVertical(
+            anchorInOverlay.center.dy - childSize.height / 2,
+            childSize.height,
+          ),
+        );
+      case _TailedTooltipAxis.vertical:
+        final double x = _clampHorizontal(
+          anchorInOverlay.center.dx - childSize.width / 2,
+          childSize.width,
+        );
+        final double y = preferBelow
+            ? anchorInOverlay.bottom + gap
+            : anchorInOverlay.top - gap - childSize.height;
+        return Offset(x, _clampVertical(y, childSize.height));
+    }
+  }
+
+  double _clampHorizontal(double x, double w) {
+    final double minX = _margin;
+    final double maxX = math.max(minX, overlaySize.width - w - _margin);
+    return x.clamp(minX, maxX);
+  }
+
+  double _clampVertical(double y, double h) {
+    final double minY = _margin;
+    final double maxY = math.max(minY, overlaySize.height - h - _margin);
+    return y.clamp(minY, maxY);
+  }
+
+  @override
+  bool shouldRelayout(covariant _TailedTooltipLayoutDelegate oldDelegate) {
+    return anchorInOverlay != oldDelegate.anchorInOverlay ||
+        overlaySize != oldDelegate.overlaySize ||
+        gap != oldDelegate.gap ||
+        preferBelow != oldDelegate.preferBelow ||
+        axis != oldDelegate.axis;
+  }
+}
+
 /// Shared interactive layer: hover + focus; Material [Tooltip] when
-/// [useMaterialTooltip], else [OverlayPortal] + [CompositedTransformFollower]
-/// for tailed bubbles. (Touch long-press matches Material [Tooltip] when
+/// [useMaterialTooltip], else [OverlayPortal.overlayChildLayoutBuilder] for
+/// tailed bubbles. (Touch long-press matches Material [Tooltip] when
 /// [tailPosition] is [NorthstarTooltipTailPosition.none].)
 class _NorthstarTooltipAnchor extends StatefulWidget {
   const _NorthstarTooltipAnchor({
@@ -227,6 +352,7 @@ class _NorthstarTooltipAnchor extends StatefulWidget {
     this.materialTextStyle,
     this.materialTextAlign,
     this.materialDecoration,
+    this.materialTooltipVerticalOffset,
   });
 
   final Widget child;
@@ -249,13 +375,15 @@ class _NorthstarTooltipAnchor extends StatefulWidget {
   final TextAlign? materialTextAlign;
   final Decoration? materialDecoration;
 
+  /// [Tooltip.verticalOffset] (center-based); null when not [useMaterialTooltip].
+  final double? materialTooltipVerticalOffset;
+
   @override
   State<_NorthstarTooltipAnchor> createState() =>
       _NorthstarTooltipAnchorState();
 }
 
 class _NorthstarTooltipAnchorState extends State<_NorthstarTooltipAnchor> {
-  final LayerLink _link = LayerLink();
   final OverlayPortalController _portal = OverlayPortalController();
   Timer? _waitTimer;
   Timer? _hideTimer;
@@ -305,40 +433,6 @@ class _NorthstarTooltipAnchorState extends State<_NorthstarTooltipAnchor> {
     _portal.hide();
   }
 
-  ({Alignment targetAnchor, Alignment followerAnchor, Offset offset})
-      _placement() {
-    final double g = widget.gap;
-    switch (widget.tailPosition) {
-      case NorthstarTooltipTailPosition.left:
-        return (
-          targetAnchor: Alignment.centerRight,
-          followerAnchor: Alignment.centerLeft,
-          offset: Offset(g, 0),
-        );
-      case NorthstarTooltipTailPosition.right:
-        return (
-          targetAnchor: Alignment.centerLeft,
-          followerAnchor: Alignment.centerRight,
-          offset: Offset(-g, 0),
-        );
-      case NorthstarTooltipTailPosition.none:
-      case NorthstarTooltipTailPosition.top:
-      case NorthstarTooltipTailPosition.bottom:
-        if (widget.preferBelow) {
-          return (
-            targetAnchor: Alignment.bottomCenter,
-            followerAnchor: Alignment.topCenter,
-            offset: Offset(0, g),
-          );
-        }
-        return (
-          targetAnchor: Alignment.topCenter,
-          followerAnchor: Alignment.bottomCenter,
-          offset: Offset(0, -g),
-        );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (widget.useMaterialTooltip) {
@@ -353,7 +447,8 @@ class _NorthstarTooltipAnchorState extends State<_NorthstarTooltipAnchor> {
               : null,
           richMessage: widget.materialRichMessage,
           preferBelow: widget.preferBelow,
-          verticalOffset: widget.gap,
+          verticalOffset:
+              widget.materialTooltipVerticalOffset ?? widget.gap,
           waitDuration: widget.waitDuration,
           showDuration: widget.showDuration,
           exitDuration: widget.exitDuration,
@@ -370,58 +465,64 @@ class _NorthstarTooltipAnchorState extends State<_NorthstarTooltipAnchor> {
       );
     }
 
-    final ({
-      Alignment targetAnchor,
-      Alignment followerAnchor,
-      Offset offset
-    }) p = _placement();
-
     return KeyedSubtree(
       key: widget.automationKey,
       child: Semantics(
         tooltip: widget.semanticMessage,
-        child: CompositedTransformTarget(
-          link: _link,
-          child: OverlayPortal(
-            controller: _portal,
-            overlayChildBuilder: (BuildContext context) {
-              return CompositedTransformFollower(
-                link: _link,
-                showWhenUnlinked: false,
-                targetAnchor: p.targetAnchor,
-                followerAnchor: p.followerAnchor,
-                offset: p.offset,
+        child: OverlayPortal.overlayChildLayoutBuilder(
+          controller: _portal,
+          overlayLocation: OverlayChildLocation.rootOverlay,
+          overlayChildBuilder: (BuildContext context, OverlayChildLayoutInfo info) {
+            if (info.childPaintTransform.determinant() == 0.0) {
+              return const SizedBox.shrink();
+            }
+            final Rect anchorInOverlay = MatrixUtils.transformRect(
+              info.childPaintTransform,
+              Rect.fromLTWH(0, 0, info.childSize.width, info.childSize.height),
+            );
+            return CustomSingleChildLayout(
+              delegate: _TailedTooltipLayoutDelegate(
+                anchorInOverlay: anchorInOverlay,
+                overlaySize: info.overlaySize,
+                gap: widget.gap,
+                preferBelow: _tailedVerticalPreferBelow(
+                  widget.tailPosition,
+                  widget.preferBelow,
+                ),
+                axis: _tailedAxisFor(widget.tailPosition),
+              ),
+              child: IgnorePointer(
                 child: widget.tooltipChild,
-              );
+              ),
+            );
+          },
+          child: Focus(
+            onFocusChange: (bool focused) {
+              _focused = focused;
+              if (focused) {
+                _hideTimer?.cancel();
+                _waitTimer?.cancel();
+                _waitTimer = Timer(widget.waitDuration, () {
+                  if (mounted && _focused) {
+                    _portal.show();
+                  }
+                });
+              } else if (!_pointerInside) {
+                _hideNow();
+              }
             },
-            child: Focus(
-              onFocusChange: (bool focused) {
-                _focused = focused;
-                if (focused) {
-                  _hideTimer?.cancel();
-                  _waitTimer?.cancel();
-                  _waitTimer = Timer(widget.waitDuration, () {
-                    if (mounted && _focused) {
-                      _portal.show();
-                    }
-                  });
-                } else if (!_pointerInside) {
-                  _hideNow();
+            child: MouseRegion(
+              onEnter: (_) {
+                _pointerInside = true;
+                _scheduleShowFromHover();
+              },
+              onExit: (_) {
+                _pointerInside = false;
+                if (!_focused) {
+                  _scheduleHideAfterExit();
                 }
               },
-              child: MouseRegion(
-                onEnter: (_) {
-                  _pointerInside = true;
-                  _scheduleShowFromHover();
-                },
-                onExit: (_) {
-                  _pointerInside = false;
-                  if (!_focused) {
-                    _scheduleHideAfterExit();
-                  }
-                },
-                child: widget.child,
-              ),
+              child: widget.child,
             ),
           ),
         ),
@@ -435,10 +536,17 @@ class _NorthstarTooltipAnchorState extends State<_NorthstarTooltipAnchor> {
 /// * No minimum width; max width [NorthstarTooltipSpecs.plainMaxWidth].
 /// * Prefer ≤ [NorthstarTooltipSpecs.plainMaxCharacters] characters (including
 ///   spaces); text wraps and the bubble grows in height.
-/// * Default placement is **above** the anchor ([preferBelow] false). Gap is
-///   [NorthstarTooltipSpecs.gapWithBoundary] when [hasVisualBoundary] is true,
-///   else [NorthstarTooltipSpecs.gapWithoutBoundary], unless [verticalOffset]
-///   is set explicitly.
+/// * Default placement for [tailPosition] [none] is **above** the anchor
+///   ([preferBelow] false). For a drawn tail, vertical placement follows the
+///   tail: [top] places the bubble **below** the anchor (tail points up); [bottom]
+///   places it **above** ([preferBelow] is ignored for those two). The **Figma
+///   edge gap** is [NorthstarTooltipSpecs.gapWithBoundary] when
+///   [hasVisualBoundary] is true, else [NorthstarTooltipSpecs.gapWithoutBoundary],
+///   unless [verticalOffset] is set explicitly. When [tailPosition] is [none],
+///   Material [Tooltip] uses the anchor **center** as its target, so the
+///   implementation adds [NorthstarTooltipSpecs.materialAnchorHalfExtentWithBoundary]
+///   or [NorthstarTooltipSpecs.materialAnchorHalfExtentWithoutBoundary] to match
+///   that edge gap visually.
 /// * [tailPosition] [none] uses the platform [Tooltip] (no drawn tail). Any
 ///   other value uses a custom bubble with a tail on that edge.
 class NorthstarPlainTooltip extends StatelessWidget {
@@ -462,6 +570,7 @@ class NorthstarPlainTooltip extends StatelessWidget {
   final NorthstarTooltipTailPosition tailPosition;
 
   /// When false (default), tooltip prefers **above** the child (Figma default).
+  /// Ignored for [tailPosition] [top] / [bottom] (placement follows the tail).
   final bool preferBelow;
 
   /// Drives default gap when [verticalOffset] is null (4px vs 8px).
@@ -505,6 +614,11 @@ class NorthstarPlainTooltip extends StatelessWidget {
             ? NorthstarTooltipSpecs.gapWithBoundary
             : NorthstarTooltipSpecs.gapWithoutBoundary);
 
+    final double materialTooltipVerticalOffset = gap +
+        (hasVisualBoundary
+            ? NorthstarTooltipSpecs.materialAnchorHalfExtentWithBoundary
+            : NorthstarTooltipSpecs.materialAnchorHalfExtentWithoutBoundary);
+
     final Widget bubbleContent = Padding(
       padding: const EdgeInsets.all(NorthstarSpacing.space8),
       child: Text(
@@ -539,6 +653,7 @@ class NorthstarPlainTooltip extends StatelessWidget {
           color: ns.inverseSurface,
           borderRadius: BorderRadius.circular(NorthstarTooltipSpecs.cornerRadius),
         ),
+        materialTooltipVerticalOffset: materialTooltipVerticalOffset,
         tooltipChild: const SizedBox.shrink(),
         child: child,
       );
@@ -577,7 +692,8 @@ class NorthstarPlainTooltip extends StatelessWidget {
 /// * Avoid interactive widgets inside the tooltip surface.
 /// * [tailPosition] [none] with text-only body uses Material [Tooltip.rich]. A
 ///   non-null [content] or [leading] always uses the custom overlay (same as a
-///   non-[none] tail).
+///   non-[none] tail). For a vertical tail, [top] / [bottom] fix placement to
+///   match the tail (see [NorthstarPlainTooltip] dartdoc).
 class NorthstarRichTooltip extends StatelessWidget {
   NorthstarRichTooltip({
     super.key,
@@ -614,6 +730,8 @@ class NorthstarRichTooltip extends StatelessWidget {
   final Widget? leading;
 
   final NorthstarTooltipTailPosition tailPosition;
+
+  /// Ignored for [tailPosition] [top] / [bottom] on the custom overlay (placement follows the tail).
   final bool preferBelow;
   final bool hasVisualBoundary;
   final double? verticalOffset;
@@ -655,6 +773,11 @@ class NorthstarRichTooltip extends StatelessWidget {
         (hasVisualBoundary
             ? NorthstarTooltipSpecs.gapWithBoundary
             : NorthstarTooltipSpecs.gapWithoutBoundary);
+
+    final double materialTooltipVerticalOffset = gap +
+        (hasVisualBoundary
+            ? NorthstarTooltipSpecs.materialAnchorHalfExtentWithBoundary
+            : NorthstarTooltipSpecs.materialAnchorHalfExtentWithoutBoundary);
 
     final Widget bodyColumn = Column(
       mainAxisSize: MainAxisSize.min,
@@ -736,6 +859,7 @@ class NorthstarRichTooltip extends StatelessWidget {
           color: ns.inverseSurface,
           borderRadius: BorderRadius.circular(NorthstarTooltipSpecs.cornerRadius),
         ),
+        materialTooltipVerticalOffset: materialTooltipVerticalOffset,
         tooltipChild: const SizedBox.shrink(),
         child: child,
       );

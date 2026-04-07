@@ -1,6 +1,6 @@
 # Contributing to ecosystem-platform
 
-This repository holds **`emp_ai_foundation`**, **`emp_ai_core`**, **`emp_ai_ds_northstar`**, **`emp_ai_ds_widgets`**, and **`emp_ai_app_shell`**. Changes here affect **every host** that pins these packages.
+This repository holds **`emp_ai_foundation`**, **`emp_ai_core`**, **`emp_ai_ds_northstar`**, **`emp_ai_ds_widgets`**, and **`emp_ai_app_shell`**. Changes here affect **every host** that pins these packages — including **ecosystem_boilerplate** via the **`packages/ecosystem-platform`** **submodule gitlink** and **`path:`** deps (see **[emp_ai_auth_dependency.md](https://github.com/maplepam/ecosystem_boilerplate/blob/main/docs/integrations/emp_ai_auth_dependency.md)**).
 
 **Not using the boilerplate?** You can still depend on this repo via **`git:`** `url` + `path` + **`ref`** (commit SHA or tag). See [Consuming without the boilerplate](#consuming-without-the-boilerplate) below.
 
@@ -49,7 +49,7 @@ Fix analyzer issues before opening a PR. Prefer **`flutter analyze`** per packag
 ## Versioning and consumers
 
 - **Library packages do not commit `pubspec.lock`.** Lockfiles live in **apps** that depend on this repo.
-- Hosts should pin **one** **`ref`** (SHA or tag) for **every** `emp_ai_*` path from this repository — see boilerplate **[platform_bom.yaml](https://github.com/maplepam/ecosystem_boilerplate/blob/main/docs/meta/platform_bom.yaml)**.
+- Hosts should pin **one** **`ref`** (SHA or tag) for **every** `emp_ai_*` path from this repository — boilerplate users track **`packages/ecosystem-platform`** as a submodule; see **[emp_ai_auth_dependency.md](https://github.com/maplepam/ecosystem_boilerplate/blob/main/docs/integrations/emp_ai_auth_dependency.md)**.
 - After you merge to `main`, downstream teams **update all** those `ref` entries together. Mixing different SHAs for different platform paths can break Pub resolution.
 
 **`emp_ai_auth`** (separate repo) pins **`emp_ai_core`** from here; coordinate **core** API changes with auth maintainers so their branch stays buildable.
@@ -68,7 +68,7 @@ Fix analyzer issues before opening a PR. Prefer **`flutter analyze`** per packag
 ## Maintenance (maintainers)
 
 - **CI:** Run **`dart run melos run analyze:all`** on PRs; keep scripts in root **`melos.yaml`** in sync with local practice.
-- **Tags (optional):** If your org uses **Git tags** for releases, document the tag → consumer bump process in your internal runbook; the boilerplate BOM can still record **commit SHAs**.
+- **Tags (optional):** If your org uses **Git tags** for releases, document the tag → consumer bump process in your internal runbook.
 - **Security / secrets:** Never commit tokens; packages stay free of environment-specific endpoints where possible — hosts pass **`NetworkStackConfig`** and flavors.
 
 Questions about **host** wiring (Melos, mini-apps, `build_defines`) belong in **ecosystem_boilerplate** `docs/`, not here.
